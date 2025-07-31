@@ -2,72 +2,54 @@ import * as cdk from 'aws-cdk-lib';
 import * as AmplifyHelpers from '@aws-amplify/cli-extensibility-helper';
 import { AmplifyDependentResourcesAttributes } from '../../types/amplify-dependent-resources-ref';
 import { Construct } from 'constructs';
-//import * as iam from 'aws-cdk-lib/aws-iam';
-//import * as sns from 'aws-cdk-lib/aws-sns';
-//import * as subs from 'aws-cdk-lib/aws-sns-subscriptions';
-//import * as sqs from 'aws-cdk-lib/aws-sqs';
+import { Bucket } from 'aws-cdk-lib/aws-s3';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 
 export class cdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps, amplifyResourceProps?: AmplifyHelpers.AmplifyResourceProps) {
     super(scope, id, props);
     /* Do not remove - Amplify CLI automatically injects the current deployment environment in this input parameter */
-    new cdk.CfnParameter(this, 'env', {
+    const env = new cdk.CfnParameter(this, 'env', {
       type: 'String',
       description: 'Current Amplify CLI env name',
     });
     /* AWS CDK code goes here - learn more: https://docs.aws.amazon.com/cdk/latest/guide/home.html */
     
-    // Example 1: Set up an SQS queue with an SNS topic 
+    const bucket = new Bucket(this, `custom-bucket-for-${env.valueAsString}`)
 
-    /*
-    const amplifyProjectInfo = AmplifyHelpers.getProjectInfo();
-    const sqsQueueResourceNamePrefix = `sqs-queue-${amplifyProjectInfo.projectName}`;
-    const queue = new sqs.Queue(this, 'sqs-queue', {
-      queueName: `${sqsQueueResourceNamePrefix}-${cdk.Fn.ref('env')}`
+    // Create Lambda function
+    const addFileLambda = new lambda.Function(this, 'AddFileLambda', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromInline(`
+        const AWS = require('aws-sdk');
+        const s3 = new AWS.S3();
+        
+        exports.handler = async () => {
+          const params = {
+            Bucket: '${bucket.bucketName}',
+            Key: \`file-\${Date.now()}.txt\`,
+            Body: 'Hello from Lambda! (env: ${process.env.ENV_NAME})'
+          };
+          
+          await s3.putObject(params).promise();
+        };
+      `),
+      environment: {
+        BUCKET_NAME: bucket.bucketName,
+        ENV_NAME: env.valueAsString,
+      }
     });
-    // 👇create sns topic
-    
-    const snsTopicResourceNamePrefix = `sns-topic-${amplifyProjectInfo.projectName}`;
-    const topic = new sns.Topic(this, 'sns-topic', {
-      topicName: `${snsTopicResourceNamePrefix}-${cdk.Fn.ref('env')}`
+
+    // Grant S3 permissions to Lambda
+    bucket.grantWrite(addFileLambda);
+
+    // Create EventBridge rule to trigger Lambda every 5 minutes
+    new events.Rule(this, 'ScheduleRule', {
+      schedule: events.Schedule.rate(cdk.Duration.minutes(5)),
+      targets: [new targets.LambdaFunction(addFileLambda)]
     });
-    // 👇 subscribe queue to topic
-    topic.addSubscription(new subs.SqsSubscription(queue));
-    new cdk.CfnOutput(this, 'snsTopicArn', {
-      value: topic.topicArn,
-      description: 'The arn of the SNS topic',
-    });
-    */
-
-    // Example 2: Adding IAM role to the custom stack 
-    /*
-    const roleResourceNamePrefix = `CustomRole-${amplifyProjectInfo.projectName}`;
-    
-    const role = new iam.Role(this, 'CustomRole', {
-      assumedBy: new iam.AccountRootPrincipal(),
-      roleName: `${roleResourceNamePrefix}-${cdk.Fn.ref('env')}`
-    }); 
-    */
-
-    // Example 3: Adding policy to the IAM role
-    /*
-    role.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ['*'],
-        resources: [topic.topicArn],
-      }),
-    );
-    */
-
-    // Access other Amplify Resources 
-    /*
-    const retVal:AmplifyDependentResourcesAttributes = AmplifyHelpers.addResourceDependency(this, 
-      amplifyResourceProps.category, 
-      amplifyResourceProps.resourceName, 
-      [
-        {category: <insert-amplify-category>, resourceName: <insert-amplify-resourcename>},
-      ]
-    );
-    */
   }
 }
