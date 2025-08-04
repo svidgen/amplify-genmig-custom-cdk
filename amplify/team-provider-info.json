@@ -10,6 +10,11 @@
       "StackName": "amplify-customcdkmigration-dev-c27f3",
       "StackId": "arn:aws:cloudformation:us-west-1:654007195465:stack/amplify-customcdkmigration-dev-c27f3/7bd05f80-666c-11f0-9218-061540ad3f3f",
       "AmplifyAppId": "d32881sshoanl4"
+    },
+    "categories": {
+      "custom": {
+        "customResourced6b37e2b": {}
+      }
     }
   }
 }
