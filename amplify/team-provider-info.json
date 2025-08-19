@@ -14,6 +14,12 @@
     "categories": {
       "custom": {
         "customResourced6b37e2b": {}
+      },
+      "auth": {
+        "customcdkmigration795885a5": {}
+      },
+      "storage": {
+        "migstorage": {}
       }
     }
   }

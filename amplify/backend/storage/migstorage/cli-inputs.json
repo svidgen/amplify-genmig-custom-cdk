@@ -1,0 +1,13 @@
+{
+  "resourceName": "migstorage",
+  "policyUUID": "d7edbd40",
+  "bucketName": "customcdkmigration6f84b97a925a49208801c5c081d42",
+  "storageAccess": "auth",
+  "guestAccess": [],
+  "authAccess": [
+    "CREATE_AND_UPDATE",
+    "READ"
+  ],
+  "triggerFunction": "NONE",
+  "groupAccess": {}
+}
